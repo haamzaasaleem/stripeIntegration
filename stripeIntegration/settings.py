@@ -106,7 +106,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://e86d-182-179-181-134.in.ngrok.io",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://127.0.0.1:5500",
@@ -114,7 +113,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5500',
-    'http://localhost:5500'
+    'http://localhost:5500',
 ]
 
 # Internationalization

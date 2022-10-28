@@ -1,9 +1,14 @@
+import json
+
 import stripe
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from rest_framework.views import APIView
+from paymentGateway.models import TransactionModel
+from product.models import ProductModel
+from paymentGateway.serializers import TransactionSerializer
 
 from product.views import *
 
@@ -56,34 +61,48 @@ class CreateStripeCheckoutSession(APIView):
             cancel_url=DOMAIN + 'cancel/',
 
         )
+        context = {
+            'session_id': checkout_session.id,
+            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY
+        }
         return redirect(checkout_session.url, code=303)
 
 
-endpoint_secret = 'whsec_c27f400dfe82bb6602156d03de12ae43e2c732bd8c7871ee09f67d7d169eaa56'
+endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
 
 class StripeWebhook(APIView):
+    print('webhook!')
+
     def post(self, request):
-        # import pdb
-        # pdb.set_trace()
+        # import pdb;pdb.set_trace()
+        event = None
         payload = request.body
-        sig_header = request.META['HTTP_STRIPE_SIGNATURE']
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, endpoint_secret
-            )
-        except ValueError as e:
-            print('ValueError')
-            return HttpResponse(status=400)
-            # raise e
-        except stripe.error.SignatureVerificationError as e:
-            # Invalid signature
-            print('Signature Error')
-            return HttpResponse(status=400)
-            # raise e
-            # Passed signature verification
-        print(payload)
-        # Handle the checkout.session.completed event
-        if event['type'] == 'checkout.session.completed':
-            print("Payment was successful.")
-        return HttpResponse(status=200)
+
+        if endpoint_secret:
+            # print(request.headers['Stripe-Signature'])
+            sig_header = request.headers.get('stripe-signature')
+            # print(sig_header)
+            try:
+                event = stripe.Webhook.construct_event(
+                    payload=payload, sig_header=sig_header, secret=endpoint_secret
+                )
+                # print(event)
+            except stripe.error.SignatureVerificationError as e:
+                print('⚠️  Webhook signature verification failed.' + str(e))
+                return HttpResponse(status=400)
+            if event['type'] == 'checkout.session.completed':
+                session = event['data']['object']
+                data = {
+                    'transaction_id': session.payment_intent,
+                    'product': session.metadata['product_id'],
+                    'payment_status': session.payment_status
+                }
+                serializer = TransactionSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                # print(session.payment_intent)
+                # print(session.metadata['product_id'])
+                    return HttpResponse(status=400)
+            return HttpResponse(status=200)
+
