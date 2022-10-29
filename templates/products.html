@@ -20,7 +20,8 @@
           <h5>$20.00</h5>
         </div>  -->
       </div>
-      <form action="http://127.0.0.1:8000/api/create-checkout-session/2/" method="POST">
+      <form action="http://127.0.0.1:8000/api/create-checkout-session/1/" method="POST">
+          {% csrf_token %}
         <button type="submit" id="checkout-button">Checkout</button>
       </form>
     </section>

@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from paymentGateway.models import TransactionModel
 from product.models import ProductModel
 from paymentGateway.serializers import TransactionSerializer
+from django.views.decorators.csrf import csrf_exempt
+
 
 from product.views import *
 
@@ -28,7 +30,7 @@ def cancel(request):
 
 
 class CreateStripeCheckoutSession(APIView):
-    # @csrf_exempt
+    @csrf_exempt
     def post(self, request, *args, **kwargs):
         DOMAIN = 'http://127.0.0.1:8000/api/'
 
@@ -72,9 +74,9 @@ endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
 
 class StripeWebhook(APIView):
-    print('webhook!')
 
     def post(self, request):
+        print('webhook!')
         # import pdb;pdb.set_trace()
         event = None
         payload = request.body
@@ -93,16 +95,16 @@ class StripeWebhook(APIView):
                 return HttpResponse(status=400)
             if event['type'] == 'checkout.session.completed':
                 session = event['data']['object']
-                data = {
+                transaction_details = {
                     'transaction_id': session.payment_intent,
                     'product': session.metadata['product_id'],
                     'payment_status': session.payment_status
                 }
-                serializer = TransactionSerializer(data=data)
+                serializer = TransactionSerializer(data=transaction_details)
                 if serializer.is_valid():
                     serializer.save()
-                # print(session.payment_intent)
-                # print(session.metadata['product_id'])
-                    return HttpResponse(status=400)
-            return HttpResponse(status=200)
+                    # print(session.payment_intent)
+                    # print(session.metadata['product_id'])
+                    return HttpResponse(status=200)
 
+            return HttpResponse(status=200)
